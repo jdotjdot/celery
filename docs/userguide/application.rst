@@ -460,7 +460,7 @@ chain breaks:
         from celery.registry import tasks
 
         class Hello(Task):
-            queue = 'hipri'
+            send_error_emails = True
 
             def run(self, to):
                 return 'hello {0}'.format(to)
@@ -477,8 +477,13 @@ chain breaks:
 
         from celery.task import task
 
+<<<<<<< HEAD
         @task(queue='hipri')
         def hello(to):
+=======
+        @task(send_error_emails=True)
+        def hello(x):
+>>>>>>> parent of b5d8c1c... Removes TASK_ERROR_EMAILS/mail_admins
             return 'hello {0}'.format(to)
 
 Abstract Tasks
@@ -538,7 +543,7 @@ by changing its :meth:`@Task` attribute:
     >>> app = Celery()
 
     >>> class MyBaseTask(Task):
-    ...    queue = 'hipri'
+    ...    send_error_emails = True
 
     >>> app.Task = MyBaseTask
     >>> app.Task

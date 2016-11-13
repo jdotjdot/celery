@@ -106,6 +106,8 @@ and creating Celery applications.
 
     .. automethod:: producer_or_acquire
 
+    .. automethod:: mail_admins
+
     .. automethod:: select_queues
 
     .. automethod:: now

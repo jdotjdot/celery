@@ -20,6 +20,7 @@ from celery.utils import abstract
 from celery.utils.functional import mattrgetter, maybe_list
 from celery.utils.imports import instantiate
 from celery.utils.serialization import raise_with_context
+from celery.utils.mail import ErrorMail
 
 from .annotations import resolve_all as resolve_all_annotations
 from .registry import _unpickle_task_v2
@@ -152,6 +153,7 @@ class Task(object):
     __trace__ = None
     __v2_compat__ = False  # set by old base in celery.task.base
 
+    ErrorMail = ErrorMail
     MaxRetriesExceededError = MaxRetriesExceededError
     OperationalError = OperationalError
 
@@ -207,6 +209,10 @@ class Task(object):
     #: When enabled errors will be stored even if the task is otherwise
     #: configured to ignore results.
     store_errors_even_if_ignored = None
+
+    #: If enabled an email will be sent to :setting:`admins` whenever a task
+    #: of this type fails.
+    send_error_emails = None
 
     #: The name of a serializer that are registered with
     #: :mod:`kombu.serialization.registry`.  Default is `'pickle'`.
@@ -291,6 +297,7 @@ class Task(object):
     __bound__ = False
 
     from_config = (
+        ('send_error_emails', 'task_send_error_emails'),
         ('serializer', 'task_serializer'),
         ('rate_limit', 'task_default_rate_limit'),
         ('track_started', 'task_track_started'),
@@ -950,6 +957,11 @@ class Task(object):
             None: The return value of this handler is ignored.
         """
         pass
+
+    def send_error_email(self, context, exc, **kwargs):
+        if self.send_error_emails and \
+                not getattr(self, 'disable_error_emails', None):
+            self.ErrorMail(self, **kwargs).send(context, exc)
 
     def add_trail(self, result):
         if self.trail:

@@ -24,6 +24,20 @@ from celery.platforms import pyimplementation
 from celery.utils.collections import DictAttribute
 from celery.utils.serialization import pickle
 from celery.utils.time import timezone
+
+from celery.tests.case import (
+    CELERY_TEST_CONFIG,
+    AppCase,
+    Mock,
+    Case,
+    ContextMock,
+    depends_on_current_app,
+    mock,
+    patch,
+)
+from celery.utils import uuid
+from celery.utils.mail import ErrorMail
+
 from celery.utils.objects import Bunch
 
 THIS_IS_A_KEY = 'this is a value'
@@ -733,6 +747,20 @@ class test_App:
         for key, expected_value in items(expected_fields):
             assert info[key] == expected_value
 
+    def test_mail_admins(self):
+
+        class Loader(BaseLoader):
+
+            def mail_admins(*args, **kwargs):
+                return args, kwargs
+
+        self.app.loader = Loader(app=self.app)
+        self.app.conf.admins = None
+        self.assertFalse(self.app.mail_admins('Subject', 'Body'))
+        self.app.conf.admins = [('George Costanza', 'george@vandelay.com')]
+        self.assertTrue(self.app.mail_admins('Subject', 'Body'))
+
+
     def test_amqp_failover_strategy_selection(self):
         # Test passing in a string and make sure the string
         # gets there untouched
@@ -889,6 +917,21 @@ class test_App:
             prod, 'footask', message, event_dispatcher=dispatcher,
             exchange='bar_exchange', routing_key='bar_exchange',
         )
+
+    def test_error_mail_sender(self):
+        x = ErrorMail.subject % {'name': 'task_name',
+                                 'id': uuid(),
+                                 'exc': 'FOOBARBAZ',
+                                 'hostname': 'lana'}
+        self.assertTrue(x)
+
+    def test_error_mail_disabled(self):
+        task = Mock()
+        x = ErrorMail(task)
+        x.should_send = Mock()
+        x.should_send.return_value = False
+        x.send(Mock(), Mock())
+        task.app.mail_admins.assert_not_called()
 
     def test_select_queues(self):
         self.app.amqp = Mock(name='amqp')

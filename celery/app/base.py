@@ -855,6 +855,24 @@ class Celery(object):
         """Return the current time and date as a datetime."""
         return self.loader.now(utc=self.conf.enable_utc)
 
+    def mail_admins(self, subject, body, fail_silently=False):
+        """Sends an email to the admins in the :setting:`admins` setting."""
+        conf = self.conf
+        if conf.admins:
+            to = [admin_email for _, admin_email in conf.admins]
+            return self.loader.mail_admins(
+                subject, body, fail_silently, to=to,
+                sender=conf.server_email,
+                host=conf.email_host,
+                port=conf.email_port,
+                user=conf.email_host_user,
+                password=conf.email_host_password,
+                timeout=conf.email_timeout,
+                use_ssl=conf.email_use_ssl,
+                use_tls=conf.email_use_tls,
+                charset=conf.email_charset,
+            )
+
     def select_queues(self, queues=None):
         """Select subset of queues.
 
